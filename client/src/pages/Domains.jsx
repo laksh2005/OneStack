@@ -75,17 +75,27 @@ const Domains = () => {
     const fetchDomains = async () => {
       try {
         const { domainsProgress } = await getAllDomainsProgress();
+          // Enhance domain list with progress data
+        const started = domainsList
+          .filter(d => domainsProgress.some(p => p.domainId === d.id))
+          .map(d => {
+            const progress = domainsProgress.find(p => p.domainId === d.id);
+            return {
+              ...d,
+              completedTopics: progress.completedTopics,
+              totalTopics: progress.totalTopics,
+              progress: Math.round((progress.completedTopics / progress.totalTopics) * 100) || 0
+            };
+          });
         
-        // Get list of started domain IDs
-        const startedDomainIds = domainsProgress.map(d => d.domainId);
-        
-        // Split domains into started and available
-        const started = domainsList.filter(d => 
-          startedDomainIds.includes(d.id)
-        );
         const available = domainsList.filter(d => 
-          !startedDomainIds.includes(d.id)
-        );
+          !domainsProgress.some(p => p.domainId === d.id)
+        ).map(d => ({
+          ...d,
+          completedTopics: 0,
+          totalTopics: 0,
+          progress: 0
+        }));
 
         setStartedDomains(started);
         setAvailableDomains(available);

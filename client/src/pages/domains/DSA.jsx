@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { toast, Toaster } from 'react-hot-toast';
 import ProgressBar from '../../components/ProgressBar';
 import TopicChecklist from '../../components/TopicChecklist';
-import { loadDomainProgress, saveDomainProgress } from '../../utils/progressUtils';
 import useDomainProgress from '../../hooks/useDomainProgress';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
 
 // Domain-specific data
 const domainName = "DSA";
@@ -26,21 +27,44 @@ const defaultTopics = [
 ];
 
 const DSA = () => {
-  const [progress, setProgress] = useState(0);
-  const { topics, updateTopics, isLoading } = useDomainProgress(domainName, defaultTopics);
-  
-  useEffect(() => {
-    // Calculate progress whenever topics change
-    const completedCount = topics.filter(topic => topic.completed).length;
-    setProgress(Math.round((completedCount / topics.length) * 100));
-  }, [topics]);
-  
-  // Handler for progress updates from TopicChecklist
-  const handleProgressChange = (newProgress) => {
-    setProgress(newProgress);
-  };
+  const { topics, updateTopics, isLoading, error, progress, refetch } = useDomainProgress(domainName, defaultTopics);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/40 dark:to-blue-800/40 py-8 flex items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner size="large" />
+          <p className="mt-4 text-gray-600 dark:text-gray-300">Loading your progress...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/40 dark:to-blue-800/40 py-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="mb-4 text-red-600 dark:text-red-400">
+            <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Failed to Load Progress</h3>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">{error}</p>
+          <button
+            onClick={refetch}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/40 dark:to-purple-800/40 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/40 dark:to-blue-800/40 py-8">
+      <Toaster position="top-right" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header Section */}
         <div className="relative mb-8">
@@ -49,16 +73,16 @@ const DSA = () => {
             className="absolute top-0 left-0 flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
+              <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
             </svg>
             <span>Back to Domains</span>
           </Link>
 
           <div className="text-center pt-12">
-            <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white mb-4">{domainName}</h1>
+            <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white mb-4">Data Structures &amp; Algorithms</h1>
             <div className="max-w-3xl mx-auto">
               <p className="text-lg text-gray-600 dark:text-gray-300">
-                Master the fundamentals of Data Structures and Algorithms
+                Master fundamental DSA concepts and improve your problem-solving skills
               </p>
             </div>
           </div>
@@ -97,10 +121,12 @@ const DSA = () => {
                   <div className="text-sm text-gray-500 dark:text-gray-400">Remaining</div>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 text-center">
-                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    {Math.round((topics.filter(t => t.completed).length / topics.length) * 100)}%
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {progress >= 100 ? '🎉' : '📚'}
                   </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Success Rate</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    {progress >= 100 ? 'Complete!' : 'In Progress'}
+                  </div>
                 </div>
               </div>
             </div>
@@ -108,25 +134,21 @@ const DSA = () => {
             {/* Topics Checklist */}
             <div className="bg-white dark:bg-black rounded-2xl shadow-lg p-6 backdrop-blur-sm bg-opacity-80 dark:bg-opacity-40">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Learning Path</h2>
-              <div className="grid gap-4">
+              <div className="space-y-4">
                 {topics.map((topic, index) => (
-                  <div 
-                    key={topic.id}
-                    className={`relative flex items-center p-4 rounded-lg transition-all duration-200
-                      ${topic.completed 
-                        ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800' 
-                        : 'bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800'}
-                    `}
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center">
-                        <span className={`flex items-center justify-center w-8 h-8 rounded-full mr-4 text-sm font-medium
+                  <div key={topic.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-xl">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex-shrink-0">
+                        <span className={`
+                          inline-flex items-center justify-center h-8 w-8 rounded-full
                           ${topic.completed 
-                            ? 'bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200' 
+                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
                             : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}
                         `}>
                           {index + 1}
                         </span>
+                      </div>
+                      <div>
                         <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                           {topic.name}
                         </h3>
@@ -139,16 +161,12 @@ const DSA = () => {
                         onChange={() => {
                           const newTopics = [...topics];
                           newTopics[index].completed = !newTopics[index].completed;
-                          updateTopics(newTopics)
-                            .then(() => {
-                              const completedCount = newTopics.filter(t => t.completed).length;
-                              setProgress(Math.round((completedCount / newTopics.length) * 100));
-                            })
-                            .catch((error) => {
-                              console.error('Failed to update progress:', error);
-                            });
+                          updateTopics(newTopics).catch(() => {
+                            // Error is handled by the hook
+                            toast.error('Failed to update progress');
+                          });
                         }}
-                        className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:bg-gray-900 dark:border-gray-600"
+                        className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600"
                       />
                     </div>
                   </div>
@@ -159,87 +177,58 @@ const DSA = () => {
 
           {/* Sidebar */}
           <div className="space-y-8">
-            {/* Tech Stack */}
+            {/* Resources */}
             <div className="bg-white dark:bg-black rounded-2xl shadow-lg p-6 backdrop-blur-sm bg-opacity-80 dark:bg-opacity-40">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Tech Stack</h2>
-              <div className="flex flex-wrap gap-2">
-                <span className="px-4 py-2 rounded-full text-sm font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">C++</span>
-                <span className="px-4 py-2 rounded-full text-sm font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">Java</span>
-                <span className="px-4 py-2 rounded-full text-sm font-medium bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">Python</span>
-                <span className="px-4 py-2 rounded-full text-sm font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200">JavaScript</span>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Resources</h2>
+              <div className="space-y-4">
+                <a 
+                  href="#"
+                  className="block p-4 bg-gray-50 dark:bg-gray-900 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <h3 className="font-semibold text-gray-900 dark:text-white">Practice Problems</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Curated collection of DSA problems</p>
+                </a>
+                <a 
+                  href="#"
+                  className="block p-4 bg-gray-50 dark:bg-gray-900 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <h3 className="font-semibold text-gray-900 dark:text-white">Video Tutorials</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Step-by-step explanations</p>
+                </a>
+                <a 
+                  href="#"
+                  className="block p-4 bg-gray-50 dark:bg-gray-900 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <h3 className="font-semibold text-gray-900 dark:text-white">Documentation</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Detailed concepts and implementations</p>
+                </a>
               </div>
             </div>
 
-            {/* Resources */}
+            {/* Next Steps */}
             <div className="bg-white dark:bg-black rounded-2xl shadow-lg p-6 backdrop-blur-sm bg-opacity-80 dark:bg-opacity-40">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Learning Resources</h2>
-              
-              {/* Documentation */}
-              <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Documentation</h3>
-                <a 
-                  href="https://cp-algorithms.com/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center p-4 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-600 dark:text-blue-400 mr-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-                  </svg>
-                  <div>
-                    <div className="font-medium text-gray-900 dark:text-white">CP Algorithms</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">Competitive Programming Algorithms</div>
-                  </div>
-                </a>
-              </div>
-
-              {/* Video Tutorials */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Video Tutorials</h3>
-                <div className="grid gap-4">
-                  <a 
-                    href="https://www.youtube.com/playlist?list=PLfqMhTWNBTe3LtFWcvwpqTkUSlB32kJop" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="group relative overflow-hidden rounded-lg aspect-video"
-                  >
-                    <img 
-                      src={`https://i.ytimg.com/vi/yRpLlJmRo2w/hq720.jpg?sqp=-oaymwEXCK4FEIIDSFryq4qpAwkIARUAAIhCGAE=&rs=AOn4CLDWx6CrwBwLPpf8WhpblMPE9MK4oQ`}
-                      alt="FreeCodeCamp DSA Course"
-                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z"/>
-                      </svg>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Next Steps</h2>
+              {progress < 100 ? (
+                <div className="space-y-4">
+                  {topics.filter(t => !t.completed).slice(0, 3).map((topic, index) => (
+                    <div key={topic.id} className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl">
+                      <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
+                        <span className="text-blue-600 dark:text-blue-400 mr-2">{index + 1}</span>
+                        {topic.name}
+                      </h3>
                     </div>
-                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
-                      <div className="text-white text-sm font-medium">DSA Course Java</div>
-                    </div>
-                  </a>
-
-                  <a 
-                    href="https://youtube.com/playlist?list=PLDzeHZWIZsTryvtXdMr6rPh4IDexB5NIA&si=bUs1wuXosbJbE0gh" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="group relative overflow-hidden rounded-lg aspect-video"
-                  >
-                    <img 
-                      src={`https://i.ytimg.com/vi/WQoB2z67hvY/hqdefault.jpg?sqp=-oaymwEXCNACELwBSFryq4qpAwkIARUAAIhCGAE=&rs=AOn4CLC67s1Sgk0k2zdN0cWG1WacUylIWQ`}
-                      alt="William Fiset DSA Course"
-                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z"/>
-                      </svg>
-                    </div>
-                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
-                      <div className="text-white text-sm font-medium">Full DSA Course Cpp</div>
-                    </div>
-                  </a>
+                  ))}
                 </div>
-              </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                    🎉 All topics completed!
+                  </p>
+                  <p className="text-gray-500 dark:text-gray-400">
+                    Ready for advanced challenges
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

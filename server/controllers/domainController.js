@@ -7,17 +7,17 @@ const updateDomainProgress = async (req, res) => {
     const userId = req.user._id;
 
     // Enhanced input validation
-    if (!userId) {
-      return res.status(401).json({
+    if (!userId || !domainId || !domainName) {
+      return res.status(400).json({
         success: false,
-        error: 'User not authenticated'
+        error: 'Missing required fields: userId, domainId, or domainName'
       });
     }
 
     if (!Array.isArray(topics)) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid topics data'
+        error: 'Invalid topics data - expected an array'
       });
     }
 
@@ -31,105 +31,89 @@ const updateDomainProgress = async (req, res) => {
     if (!isValidTopics) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid topic format in topics array'
+        error: 'Invalid topic format - each topic must have id (number), name (string), and completed (boolean)'
       });
     }
 
-    // Validate all required fields are present
-    if (!domainId || !domainName) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required fields'
-      });
-    }
-
-    const now = new Date();
-    const updatedTopics = topics.map(topic => ({
-      ...topic,
-      completedAt: topic.completed ? (topic.completedAt || now) : null
-    }));
-
-    const completedTopics = updatedTopics.filter(topic => topic.completed).length;
-
-    // Prepare update with validation
+    // Find user and update atomically
+    const completedTopics = topics.filter(topic => topic.completed).length;
     const domainUpdate = {
       domainId,
       domainName,
-      totalTopics: updatedTopics.length,
+      topics,
       completedTopics,
-      lastUpdated: now,
-      topics: updatedTopics
+      totalTopics: topics.length,
+      lastUpdated: new Date()
     };
 
-    // Validate the update object
-    if (completedTopics > domainUpdate.totalTopics) {
-      return res.status(400).json({
-        success: false,
-        error: 'Completed topics cannot exceed total topics'
-      });
-    }
+    // Use findOneAndUpdate to avoid race conditions
+    const user = await User.findOneAndUpdate(
+      { _id: userId, 'domainProgress.domainId': { $ne: domainId } },
+      {
+        $push: { 
+          domainProgress: domainUpdate 
+        }
+      },
+      { new: true }
+    );
 
-    // Try to update existing domain progress with upsert
-    let user = await User.findById(userId);
-    
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
+      // Domain progress exists, update it
+      const updatedUser = await User.findOneAndUpdate(
+        { 
+          _id: userId, 
+          'domainProgress.domainId': domainId 
+        },
+        {
+          $set: { 
+            'domainProgress.$': domainUpdate
+          }
+        },
+        { new: true }
+      );
+
+      if (!updatedUser) {
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to update domain progress'
+        });
+      }
+
+      // Update total completed topics
+      const totalCompleted = updatedUser.domainProgress.reduce(
+        (sum, domain) => sum + domain.completedTopics,
+        0
+      );
+
+      await User.findByIdAndUpdate(userId, { totalTopicsCompleted: totalCompleted });
+
+      return res.json({
+        success: true,
+        domainProgress: domainUpdate,
+        totalTopicsCompleted: totalCompleted
       });
     }
 
-    const existingDomainIndex = user.domainProgress.findIndex(d => d.domainId === domainId);
-
-    if (existingDomainIndex === -1) {
-      // Domain progress doesn't exist, push new entry
-      user.domainProgress.push(domainUpdate);
-    } else {
-      // Update existing domain progress
-      user.domainProgress[existingDomainIndex] = domainUpdate;
-    }
-
-    // Update total completed topics
+    // First time domain progress was added
+    // Calculate new total
     const totalCompleted = user.domainProgress.reduce(
       (sum, domain) => sum + domain.completedTopics,
       0
     );
-    user.totalTopicsCompleted = totalCompleted;
 
-    // Save the updated user document
-    await user.save();
-
-    // Get the updated domain progress for verification
-    const updatedDomainProgress = user.domainProgress.find(d => d.domainId === domainId);
-
-    // Verify the update was successful
-    if (!updatedDomainProgress) {
-      console.error('Domain progress not found after update:', { userId, domainId });
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to verify domain progress update'
-      });
-    }
-
-    // Log successful update
-    console.log('Domain progress updated successfully:', {
-      userId,
-      domainId,
-      completedTopics: updatedDomainProgress.completedTopics,
-      totalTopics: updatedDomainProgress.totalTopics
-    });
+    await User.findByIdAndUpdate(userId, { totalTopicsCompleted: totalCompleted });
 
     res.json({
       success: true,
-      domainProgress: updatedDomainProgress,
-      totalTopicsCompleted: user.totalTopicsCompleted
+      domainProgress: domainUpdate,
+      totalTopicsCompleted: totalCompleted
     });
 
   } catch (error) {
     console.error('Error updating domain progress:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to update domain progress'
+      error: 'Server error while updating domain progress'
     });
   }
 };
@@ -137,32 +121,39 @@ const updateDomainProgress = async (req, res) => {
 // Get domain progress for a user
 const getDomainProgress = async (req, res) => {
   try {
-    const userId = req.user._id; // Fix: Use _id instead of id
+    const userId = req.user._id;
     const { domainId } = req.params;
 
+    if (!userId || !domainId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required parameters: userId or domainId'
+      });
+    }
+
     const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
     const domainProgress = user.domainProgress.find(
       d => d.domainId === domainId
     );
 
-    // For new users or domains without progress, return null
-    if (!domainProgress) {
-      return res.json({
-        success: true,
-        domainProgress: null
-      });
-    }
-
+    // For new domains without progress, return success with null data
     res.json({
       success: true,
-      domainProgress
+      domainProgress: domainProgress || null
     });
 
   } catch (error) {
     console.error('Error fetching domain progress:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Failed to fetch domain progress' 
+      error: 'Server error while fetching domain progress'
     });
   }
 };
@@ -170,46 +161,74 @@ const getDomainProgress = async (req, res) => {
 // Get all domains progress for a user
 const getAllDomainsProgress = async (req, res) => {
   try {
-    const userId = req.user._id; // Fix: Use _id instead of id
+    const userId = req.user._id;
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required parameter: userId'
+      });
+    }
+
     const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
 
     res.json({
       success: true,
-      domainsProgress: user.domainProgress,
-      totalTopicsCompleted: user.totalTopicsCompleted
+      domainsProgress: user.domainProgress || [],
+      totalTopicsCompleted: user.totalTopicsCompleted || 0
     });
 
   } catch (error) {
     console.error('Error fetching all domains progress:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Failed to fetch domains progress' 
+      error: 'Server error while fetching domains progress'
     });
   }
 };
 
-// Get recent domain activity for a user
+// Get recent activity for a user
 const getRecentActivity = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const user = await User.findById(userId);    // Get all domain progress entries and flatten topics
-    const recentActivity = user.domainProgress.reduce((activities, domain) => {
-        const domainTopics = domain.topics
-          .filter(topic => topic.completed)
+    const userId = req.user._id;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required parameter: userId'
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    // Get recent activity from domain progress, sorted by lastUpdated
+    const recentActivity = user.domainProgress
+      .reduce((activities, domain) => {
+        const domainActivities = domain.topics
+          .filter(topic => topic.completedAt)
           .map(topic => ({
-            type: 'completed',
-            title: `Completed ${topic.name}`,
-            time: topic.completedAt || new Date(),
             domainId: domain.domainId,
             domainName: domain.domainName,
-            topicId: topic.id
+            topicId: topic.id,
+            title: `Completed "${topic.name}"`,
+            time: topic.completedAt
           }));
-        return [...activities, ...domainTopics];
+        return [...activities, ...domainActivities];
       }, [])
-      // Sort by completion time, most recent first
       .sort((a, b) => new Date(b.time) - new Date(a.time))
-      // Take the last 35 completed topics
-      .slice(0, 35);
+      .slice(0, 10); // Limit to most recent 10 activities
 
     res.json({
       success: true,
@@ -220,7 +239,7 @@ const getRecentActivity = async (req, res) => {
     console.error('Error fetching recent activity:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Failed to fetch recent activity' 
+      error: 'Server error while fetching recent activity' 
     });
   }
 };

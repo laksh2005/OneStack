@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProgressBar from './ProgressBar';
-import { getDomainProgress } from '../services/domainService';
 import { domainColors } from '../data/domainList';
 
 // Domain-specific icons mapping
@@ -26,48 +25,20 @@ const domainEmojis = {
   'VLSI': '💽'                    // Computer chip
 };
 
-const DomainCard = ({ name }) => {
+const DomainCard = ({ name, completedTopics = 0, totalTopics = 0 }) => {
   const navigate = useNavigate();
-  const [progress, setProgress] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
-    // Generate a URL-friendly version of the domain name
+  
+  // Generate a URL-friendly version of the domain name
   const domainId = name.toLowerCase().replace(/[\/\s]+/g, '-').trim();
   
   // Get domain color or use default blue
   const colorClass = domainColors[name] || 'bg-blue-500';
-  
-  // Load progress from backend on mount
-  useEffect(() => {
-    const loadProgress = async () => {
-      try {
-        const domainProgress = await getDomainProgress(domainId);
-        if (domainProgress) {
-          const calculatedProgress = Math.round(
-            (domainProgress.completedTopics / domainProgress.totalTopics) * 100
-          );
-          setProgress(calculatedProgress);
-        } else {
-          const key = `domain_${name.replace(/\s+/g, '_').toLowerCase()}`;
-          const savedData = localStorage.getItem(key);
-          
-          if (savedData) {
-            const topics = JSON.parse(savedData);
-            const completedCount = topics.filter(topic => topic.completed).length;
-            const calculatedProgress = Math.round((completedCount / topics.length) * 100);
-            setProgress(calculatedProgress);
-          }
-        }
-      } catch (error) {
-        console.error('Error loading domain progress:', error);
-      }
-    };
 
-    loadProgress();
-  }, [name, domainId]);
-  
-  const handleClick = () => {
-    navigate(`/domain/${domainId}`);
-  };
+  // Calculate progress percentage
+  const progress = totalTopics > 0 
+    ? Math.round((completedTopics / totalTopics) * 100)
+    : 0;
 
   const getCardStyle = () => {
     let style = `relative overflow-hidden bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 cursor-pointer 
@@ -82,7 +53,7 @@ const DomainCard = ({ name }) => {
   return (
     <div 
       className={getCardStyle()}
-      onClick={handleClick}
+      onClick={() => navigate(`/domains/${domainId}`)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -107,12 +78,10 @@ const DomainCard = ({ name }) => {
             <span className="text-gray-600 dark:text-gray-300">Progress</span>
             <span className="font-medium">{progress}%</span>
           </div>
-          <ProgressBar 
-            value={progress} 
-            color={colorClass}
-            showPercentage={false}
-            className="h-2"
-          />
+          <ProgressBar progress={progress} />
+          <div className="text-gray-600 dark:text-gray-300 text-sm mt-2">
+            {completedTopics} / {totalTopics} topics completed
+          </div>
         </div>
 
         {/* Status badge */}
