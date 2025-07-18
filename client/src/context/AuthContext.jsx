@@ -30,6 +30,7 @@ export const AuthProvider = ({ children }) => {
       
       const response = await fetch(AUTH_ENDPOINTS.LOGIN, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },

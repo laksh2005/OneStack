@@ -38,18 +38,12 @@ import Web3 from './pages/domains/Web3';
 import IoT from './pages/domains/IoT';
 import VLSI from './pages/domains/VLSI';
 
-// Root redirect component
-const RootRedirect = () => {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />;
-};
-
 function App() {
   return (
     <AIProviderProvider>
       <Routes>
         <Route path="/" element={<BaseLayout />}>
-          <Route index element={<RootRedirect />} />
+          <Route index element={<About />} />
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
           <Route path="about" element={<About />} />

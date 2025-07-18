@@ -17,11 +17,11 @@ const Navbar = () => {
   const navigate = useNavigate();
 
   const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', route: '/' },
+    { icon: LayoutDashboard, label: 'Dashboard', route: '/dashboard' },
     { icon: BookOpen, label: 'Domains', route: '/domains' },
     { icon: FileText, label: 'Articles', route: '/articles' },
     { icon: Users, label: 'Team', route: '/team' },
-    { icon: Info, label: 'About Us', route: '/about' },
+    { icon: Info, label: 'About Us', route: '/' },
   ];
 
   const handleNavigation = (route) => {
@@ -43,7 +43,7 @@ const Navbar = () => {
 
       {/* Vertical Sidebar */}
       <nav className="fixed left-0 top-0 h-full w-[72px] bg-white dark:bg-black border-r border-gray-200 dark:border-gray-800 flex flex-col items-center py-4 z-20">        {/* Logo */}
-        <Link to="/" className="mb-12">
+        <Link to="/dashboard" className="mb-12">
           <img 
             src="/logo.png" 
             alt="OneStack Logo" 
