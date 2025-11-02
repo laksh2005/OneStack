@@ -49,21 +49,13 @@ const EditProfile = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await updateUserProfile(formData);
-      const response = await fetch(`http://localhost:5000/api/users/profile`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`
-        },
-        body: JSON.stringify(formData)
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update profile on server');
+      const result = await updateUserProfile(formData);
+      if (result?.success) {
+        toast.success('Profile updated successfully!');
+        navigate('/profile');
+      } else {
+        throw new Error(result?.error || 'Failed to update profile');
       }
-      toast.success('Profile updated successfully!');
-      navigate('/profile');
     } catch (error) {
       toast.error(error.message || 'Failed to update profile');
     }

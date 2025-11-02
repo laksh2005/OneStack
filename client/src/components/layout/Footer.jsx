@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { API_URL } from "../../constants/api";
 
 const Footer = () => {
   const [email, setEmail] = useState("");
@@ -14,7 +15,7 @@ const Footer = () => {
     e.preventDefault();
     // Here you would typically call an API to handle the subscription
     const response = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL}/api/newsletter/subscribe`,
+      `${API_URL}/newsletter/subscribe`,
       {
         method: "POST",
         headers: {
@@ -24,8 +25,7 @@ const Footer = () => {
         body: JSON.stringify({ email }),
       }
     );
-    console.log(response);
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
     if (response.ok) {
       setSubscribeStatus({
         message: "Thanks for subscribing to our newsletter!",
@@ -36,8 +36,14 @@ const Footer = () => {
       setTimeout(() => {
         setSubscribeStatus({ message: "", type: "" });
       }, 3000);
+    } else if (response.status === 409) {
+      // Already subscribed
+      setSubscribeStatus({ message: data.message || "You are already subscribed.", type: "success" });
+      setTimeout(() => {
+        setSubscribeStatus({ message: "", type: "" });
+      }, 3000);
     } else {
-      setSubscribeStatus({ message: `${data.message}`, type: "fail" });
+      setSubscribeStatus({ message: `${data.message || 'Subscription failed. Please try again.'}`, type: "fail" });
     }
   };
 

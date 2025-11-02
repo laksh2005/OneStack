@@ -4,6 +4,7 @@ import BaseLayout from './components/layout/BaseLayout';
 import { AIProviderProvider } from './context/AIProviderContext';
 import ChatBot from './components/chatbot/ChatBot';
 import ProtectedRoute from './components/ProtectedRoute';
+import { Analytics } from "@vercel/analytics/react"
 
 // Pages
 import Dashboard from './pages/Dashboard';
@@ -103,6 +104,7 @@ function App() {
       </Routes>
       
       <ChatBot />
+      <Analytics />
     </AIProviderProvider>
   );
 }

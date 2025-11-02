@@ -10,30 +10,54 @@ const transporter = nodemailer.createTransport({
 });
 
 exports.sendConfirmationEmail = async (toEmail) => {
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: toEmail,
-        subject: '🚀 Start Building Real Projects – Learn Smarter with OneStack!',
-        text: `Hi [Student/Developer],
+const mailOptions = {
+  from: process.env.EMAIL_USER,
+  to: toEmail,
+  subject: "🚀 Master Real Engineering with OneStack | Build What Matters",
+  text: `Hi there,
 
-Thanks for being a part of the OneStack community!
-We’re here to help you build real-world projects, stay on track, and grow your skills in the tech domain you're passionate about.
+At OneStack, we don’t just learn, we build.  
+Every project, every roadmap, and every challenge is designed to push you closer to professional-grade engineering.
 
-🌟 What’s New This Month:
-🔥 New Project Ideas: Try out “Build a Weather App” and “Portfolio Site with Tailwind”.
+🌟 This Month’s Focus: Depth over breadth.  
+Build projects that make you think, debug, and design like an engineer.
 
-🧭 Updated Roadmaps: Clearer paths for Web Dev, Python, and DSA learners.
+⚙️ Project Challenges of the Month:
 
-📊 Progress Tracking: Your dashboard now highlights milestones—see how far you’ve come!
+1. AI-Powered Chat Companion:  
+   Train and deploy a lightweight conversational agent using OpenAI or Gemini APIs.  
+   Integrate vector embeddings and retrieval pipelines for real, context-aware responses.
 
-📚 Handpicked Resources: Best YouTube tutorials + free eBooks added weekly.
+2. Distributed Task Scheduler:  
+   Architect a fault-tolerant backend service in Node.js or Go that schedules, queues, and executes background jobs efficiently — think of it as your mini Celery or Airflow.
 
-💡 Featured Tip:
-Start Small, Stay Consistent.
-Even 30 mins a day can build something big.
+3. Data-Driven Insight Dashboard:  
+   Use Python, Pandas, and Plotly to transform raw datasets into an interactive, analytical dashboard with automated report generation.
 
+4. Secure Authentication System with 2FA:  
+   Build a robust auth service with JWT, refresh tokens, and two-factor authentication using OTP or email verification flows.
+
+5. Automation Agent:  
+   Create a Python script that automates tedious web workflows: scraping, summarizing, and storing information intelligently.
+
+🧭 Refined Learning Roadmaps:  
+Now optimized for adaptability, from Full Stack to AI & Data Science.  
+Track your progress in real time and receive insights on what to learn next.
+
+📚 Elite Resource Vault:  
+Handpicked YouTube lectures, technical blogs, and open-source repositories curated weekly for applied learning.
+
+💡 Pro Insight:  
+Projects aren’t checkboxes — they’re systems of thought.  
+The harder you build, the smarter you become.
+
+Let’s turn your curiosity into capability — one build at a time.  
+Stay consistent. Stay unstoppable.
+
+- Team OneStack
 `,
 };
+
 
     try {
         const info = await transporter.sendMail(mailOptions);

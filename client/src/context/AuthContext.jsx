@@ -1,5 +1,5 @@
 import { createContext, useState, useContext, useEffect } from 'react';
-import { AUTH_ENDPOINTS } from '../constants/api';
+import { AUTH_ENDPOINTS, API_URL } from '../constants/api';
 
 const AuthContext = createContext();
 
@@ -121,7 +121,7 @@ export const AuthProvider = ({ children }) => {
       }
       
       // Make API call to update user profile
-      const response = await fetch(`http://localhost:5000/api/users/profile`, {
+      const response = await fetch(`${API_URL}/users/profile`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -137,7 +137,7 @@ export const AuthProvider = ({ children }) => {
       }
       
       // After successful update, fetch the latest user data
-      const userResponse = await fetch(`http://localhost:5000/api/users/profile`, {
+      const userResponse = await fetch(`${API_URL}/users/profile`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${user.token}`
